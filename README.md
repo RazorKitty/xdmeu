@@ -34,12 +34,11 @@ In order to build xdmenu you need the Xlib header files.
 Edit `config.mk` to match your local setup (xdmenu is installed into
 the /usr/local namespace by default).
 
-Afterwards enter the following command to build and install dmenu
+Afterwards enter the following command to build and install xdmenu
 (if necessary as root):
 
     make clean install
 
 
-Running dmenu
--------------
+## Running dmenu
 See the man page for details.
