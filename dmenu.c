@@ -57,6 +57,7 @@ static Clr *scheme[SchemeLast];
 /* Temporary arrays to allow overriding xresources values */
 static char *colortemp[9];
 static char *tempfonts;
+static char *prompttemp;
 static unsigned int border_width_temp = 0;
 
 #include "config.h"
@@ -736,6 +737,8 @@ readxresources(void) {
             colors[SchemePrompt][ColBg] = strdup(xval.addr);
         if (XrmGetResource(xdb, "dmenu.promptforeground", "*", &type, &xval))
             colors[SchemePrompt][ColFg] = strdup(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.prompt", "*", &type, &xval))
+            prompt = strdup(xval.addr);
         if (XrmGetResource(xdb, "dmenu.border_width", "*", &type, &xval)) 
             border_width = atoi(xval.addr);
         if (XrmGetResource(xdb, "dmenu.border_color", "*", &type, &xval))
@@ -770,7 +773,7 @@ main(int argc, char *argv[])
 		else if (!strcmp(argv[i], "-m"))
 			mon = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "-p"))   /* adds prompt to left of input field */
-			prompt = argv[++i];
+			prompttemp = argv[++i];
 		else if (!strcmp(argv[i], "-fn"))  /* font or font set */
 			tempfonts = argv[++i];
 		else if (!strcmp(argv[i], "-nb"))  /* normal background color */
@@ -832,6 +835,8 @@ main(int argc, char *argv[])
         colors[SchemePrompt][ColFg] = strdup(colortemp[7]);
     if ( colortemp[8])
         colors[SchemeBorder][ColBg] = strdup(colortemp[8]);
+    if ( prompttemp)
+        prompt = prompttemp;
     if ( border_width_temp)
         border_width = border_width_temp;
 
