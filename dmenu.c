@@ -27,7 +27,7 @@
 #define TEXTW(X)              (drw_fontset_getwidth(drw, (X)) + lrpad)
 
 /* enums */
-enum { SchemeNorm, SchemeSel, SchemeOut, SchemeBdr, SchemeLast }; /* color schemes */
+enum { SchemeNorm, SchemeSel, SchemeOut, SchemePrompt, SchemeBorder, SchemeLast }; /* color schemes */
 
 struct item {
 	char *text;
@@ -55,7 +55,7 @@ static Drw *drw;
 static Clr *scheme[SchemeLast];
 
 /* Temporary arrays to allow overriding xresources values */
-static char *colortemp[7];
+static char *colortemp[9];
 static char *tempfonts;
 static unsigned int border_width_temp = 0;
 
@@ -143,7 +143,7 @@ drawmenu(void)
 	drw_rect(drw, 0, 0, mw, mh, 1, 1);
 
 	if (prompt && *prompt) {
-		drw_setscheme(drw, scheme[SchemeSel]);
+		drw_setscheme(drw, scheme[SchemePrompt]);
 		x = drw_text(drw, x, 0, promptw, bh, lrpad / 2, prompt, 0);
 	}
 	/* draw input field */
@@ -673,7 +673,7 @@ setup(void)
 	win = XCreateWindow(dpy, parentwin, x, y, mw, mh, border_width,
 	                    CopyFromParent, CopyFromParent, CopyFromParent,
 	                    CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);
-    XSetWindowBorder(dpy, win, scheme[SchemeBdr][ColBg].pixel);
+    XSetWindowBorder(dpy, win, scheme[SchemeBorder][ColBg].pixel);
     XSetClassHint(dpy, win, &ch);
 
 
@@ -703,7 +703,8 @@ usage(void)
 {
 	fputs("usage: dmenu [-bfiv] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
 	      "             [-nb color] [-nf color] [-sb color] [-sf color] [-w windowid]\n"
-          "             [-of color] [-ob color] [-bw width] [-bc color]\n", stderr);
+          "             [-ob color] [-of color] [-bw width] [-bc color]\n"
+          "             [-pb color] [-pf color]\n", stderr);
 	exit(1);
 }
 
@@ -727,14 +728,18 @@ readxresources(void) {
 			colors[SchemeSel][ColBg] = strdup(xval.addr);
 		if (XrmGetResource(xdb, "dmenu.selforeground", "*", &type, &xval))
 			colors[SchemeSel][ColFg] = strdup(xval.addr);
-        if (XrmGetResource(xdb, "dmenu.outforeground", "*", &type, &xval))
-            colors[SchemeOut][ColFg] = strdup(xval.addr);
         if (XrmGetResource(xdb, "dmenu.outbackground", "*", &type, &xval))
             colors[SchemeOut][ColBg] = strdup(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.outforeground", "*", &type, &xval))
+            colors[SchemeOut][ColFg] = strdup(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.promptbackground", "*", &type, &xval))
+            colors[SchemePrompt][ColBg] = strdup(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.promptforeground", "*", &type, &xval))
+            colors[SchemePrompt][ColFg] = strdup(xval.addr);
         if (XrmGetResource(xdb, "dmenu.border_width", "*", &type, &xval)) 
             border_width = atoi(xval.addr);
         if (XrmGetResource(xdb, "dmenu.border_color", "*", &type, &xval))
-            colors[SchemeBdr][ColBg] = strdup(xval.addr);
+            colors[SchemeBorder][ColBg] = strdup(xval.addr);
         XrmDestroyDatabase(xdb);
 	}
 }
@@ -778,12 +783,16 @@ main(int argc, char *argv[])
 			colortemp[3] = argv[++i];
 		else if (!strcmp(argv[i], "-w"))   /* embedding window id */
 			embed = argv[++i];
-        else if (!strcmp(argv[i], "-ob"))  /* out foreground color */
+        else if (!strcmp(argv[i], "-ob"))  /* out background color */
             colortemp[4] = argv[++i];
-        else if (!strcmp(argv[i], "-of"))  /* out background color */
+        else if (!strcmp(argv[i], "-of"))  /* out foreground color */
             colortemp[5] = argv[++i];
-        else if (!strcmp(argv[i], "-bc"))  /* border color */
+        else if (!strcmp(argv[i], "-pb")) /* prompt background */
             colortemp[6] = argv[++i];
+        else if (!strcmp(argv[i], "-pf")) /* prompt foreground */
+            colortemp[7] = argv[++i];
+        else if (!strcmp(argv[i], "-bc"))  /* border color */
+            colortemp[8] = argv[++i];
         else if (!strcmp(argv[i], "-bw"))  /* border width */
             border_width_temp = atoi(argv[++i]);
 		else
@@ -818,8 +827,12 @@ main(int argc, char *argv[])
     if ( colortemp[5])
         colors[SchemeOut][ColFg] = strdup(colortemp[5]);
     if ( colortemp[6])
-        colors[SchemeBdr][ColBg] = strdup(colortemp[6]);
-    if (border_width_temp)
+        colors[SchemePrompt][ColBg] = strdup(colortemp[6]);
+    if ( colortemp[7])
+        colors[SchemePrompt][ColFg] = strdup(colortemp[7]);
+    if ( colortemp[8])
+        colors[SchemeBorder][ColBg] = strdup(colortemp[8]);
+    if ( border_width_temp)
         border_width = border_width_temp;
 
 	if (!drw_fontset_create(drw, (const char**)fonts, LENGTH(fonts)))
