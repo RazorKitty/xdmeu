@@ -40,5 +40,5 @@ Afterwards enter the following command to build and install xdmenu
     make clean install
 
 
-## Running dmenu
+## Running xdmenu
 See the man page for details.
