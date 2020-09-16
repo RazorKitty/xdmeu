@@ -19,7 +19,14 @@ static const char *colors[SchemeLast][2] = {
 static unsigned int lines      = 0;
 /* -bw option; Size of the window border */
 static unsigned int border_width = 0;
-
+/* -c consider co-ordinates give to b relative to the center of the menu */
+static unsigned int center = 0;
+/* the x co-ordinate */
+static double x_offset = 0;
+/* the y co-ordinate */
+static double y_offset = 0;
+/* if nonzero i will be used as the number of characters wide the menu should be */
+static unsigned int cols = 0;
 /*
  * Characters not considered part of a word while deleting words
  * for example: " /?\"&[]"

@@ -58,7 +58,11 @@ static Clr *scheme[SchemeLast];
 static char *colortemp[9];
 static char *tempfonts;
 static char *prompttemp;
+static unsigned int linestemp;
 static unsigned int border_width_temp = 0;
+static double x_offsettemp = 0;
+static double y_offsettemp = 0;
+
 
 #include "config.h"
 
@@ -649,8 +653,19 @@ setup(void)
 				if (INTERSECT(x, y, 1, 1, info[i]))
 					break;
 
-		x = info[i].x_org;
-		y = info[i].y_org + (topbar ? 0 : info[i].height - mh);
+        
+        x = (x_offset > 1)
+            ? info[i].x_org + x_offset
+            : info[i].width * x_offset;
+
+        y = (topbar) 
+            ? (y_offset > 1)
+                ? info[i].y_org + y_offset
+                : info[i].height * y_offset
+            : (y_offset > 1)
+                ? (info[i].height - mh) - y_offset
+                : info[i].height - ((info[i].height - mh) * y_offset);
+
 		mw = info[i].width - (border_width*2);
 		XFree(info);
 	} else
@@ -659,8 +674,19 @@ setup(void)
 		if (!XGetWindowAttributes(dpy, parentwin, &wa))
 			die("could not get embedding window attributes: 0x%lx",
 			    parentwin);
-		x = 0;
-		y = topbar ? 0 : wa.height - mh;
+        
+        x = (x_offset > 1)
+            ? x_offset
+            : wa.width * x_offset;
+
+        y = (topbar)
+            ? (y_offset > 1)
+                ? y_offset
+                : wa.height - y_offset
+            : (y_offset > 1)
+                ? (wa.height - mh) - y_offset
+                : wa.height - (wa.height - mh) * y_offset;
+
 		mw = wa.width - (border_width*2);
 	}
 	promptw = (prompt && *prompt) ? TEXTW(prompt) - lrpad / 4 : 0;
@@ -705,7 +731,7 @@ usage(void)
 	fputs("usage: dmenu [-bfiv] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
 	      "             [-nb color] [-nf color] [-sb color] [-sf color] [-w windowid]\n"
           "             [-ob color] [-of color] [-bw width] [-bc color]\n"
-          "             [-pb color] [-pf color]\n", stderr);
+          "             [-pb color] [-pf color] [-x xoffset] [-y yoffset] \n", stderr);
 	exit(1);
 }
 
@@ -743,6 +769,14 @@ readxresources(void) {
             border_width = atoi(xval.addr);
         if (XrmGetResource(xdb, "dmenu.border_color", "*", &type, &xval))
             colors[SchemeBorder][ColBg] = strdup(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.lines", "*", &type, &xval))
+            lines = atoi(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.x", "*", &type, &xval))
+            x_offset = atof(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.y", "*", &type, &xval))
+            y_offset = atof(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.center", "*", &type, &xval))
+            center = atoi(xval.addr);
         XrmDestroyDatabase(xdb);
 	}
 }
@@ -769,7 +803,7 @@ main(int argc, char *argv[])
 			usage();
 		/* these options take one argument */
 		else if (!strcmp(argv[i], "-l"))   /* number of lines in vertical list */
-			lines = atoi(argv[++i]);
+			linestemp = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "-m"))
 			mon = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "-p"))   /* adds prompt to left of input field */
@@ -798,6 +832,10 @@ main(int argc, char *argv[])
             colortemp[8] = argv[++i];
         else if (!strcmp(argv[i], "-bw"))  /* border width */
             border_width_temp = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-x"))   /* window x offset */
+            x_offsettemp = atof(argv[++i]);
+        else if (!strcmp(argv[i], "-y"))   /* window y offset (from bottom up if -b) */
+            y_offsettemp = atof(argv[++i]);
 		else
 			usage();
 
@@ -815,30 +853,36 @@ main(int argc, char *argv[])
 	drw = drw_create(dpy, screen, root, wa.width , wa.height);
 	readxresources();
 	/* Now we check whether to override xresources with commandline parameters */
-	if ( tempfonts )
+	if (tempfonts)
 	   fonts[0] = strdup(tempfonts);
-	if ( colortemp[0])
+	if (colortemp[0])
 	   colors[SchemeNorm][ColBg] = strdup(colortemp[0]);
-	if ( colortemp[1])
+	if (colortemp[1])
 	   colors[SchemeNorm][ColFg] = strdup(colortemp[1]);
-	if ( colortemp[2])
+	if (colortemp[2])
 	   colors[SchemeSel][ColBg]  = strdup(colortemp[2]);
-	if ( colortemp[3])
+	if (colortemp[3])
 	   colors[SchemeSel][ColFg]  = strdup(colortemp[3]);
-    if ( colortemp[4])
-        colors[SchemeOut][ColBg] = strdup(colortemp[4]);
-    if ( colortemp[5])
+    if (colortemp[4])
+       colors[SchemeOut][ColBg] = strdup(colortemp[4]);
+    if (colortemp[5])
         colors[SchemeOut][ColFg] = strdup(colortemp[5]);
-    if ( colortemp[6])
+    if (colortemp[6])
         colors[SchemePrompt][ColBg] = strdup(colortemp[6]);
-    if ( colortemp[7])
+    if (colortemp[7])
         colors[SchemePrompt][ColFg] = strdup(colortemp[7]);
-    if ( colortemp[8])
+    if (colortemp[8])
         colors[SchemeBorder][ColBg] = strdup(colortemp[8]);
-    if ( prompttemp)
+    if (prompttemp)
         prompt = prompttemp;
-    if ( border_width_temp)
+    if (border_width_temp)
         border_width = border_width_temp;
+    if (linestemp) 
+        lines = linestemp;
+    if (x_offsettemp)
+        x_offset = x_offsettemp;
+    if (y_offsettemp)
+        y_offset = y_offsettemp;
 
 	if (!drw_fontset_create(drw, (const char**)fonts, LENGTH(fonts)))
 		die("no fonts could be loaded.");
