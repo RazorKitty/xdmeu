@@ -718,12 +718,11 @@ setup(void)
             y = ((topbar)
                 ? (y_offset > 1)
                     ? y_offset
-                    : wa.height - y_offset
+                    : wa.height * y_offset
                 : (y_offset > 1)
                     ? (wa.height - mh) - y_offset
                     : wa.height - (wa.height - mh) * y_offset)
                 - (mh/2);
-            
         } else
         {
             x = (x_offset > 1)
