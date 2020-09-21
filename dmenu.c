@@ -59,6 +59,7 @@ static char *colortemp[9];
 static char *tempfonts;
 static char *prompttemp;
 static unsigned int linestemp;
+static unsigned int colstemp;
 static unsigned int border_width_temp = 0;
 static double x_offsettemp = 0;
 static double y_offsettemp = 0;
@@ -98,6 +99,14 @@ calcoffsets(void)
 	for (i = 0, prev = curr; prev && prev->left; prev = prev->left)
 		if ((i += (lines > 0) ? bh : MIN(TEXTW(prev->left->text), n)) > n)
 			break;
+}
+
+static max_textw(void)
+{
+    int len = 0;
+    for (struct item *item = items; item && item->text; item++)
+        len = MAX(TEXTW(item->text), len);
+    return len;
 }
 
 static void
@@ -627,6 +636,7 @@ setup(void)
 	bh = drw->fonts->h + 2;
 	lines = MAX(lines, 0);
 	mh = (lines + 1) * bh;
+	promptw = (prompt && *prompt) ? TEXTW(prompt) - lrpad / 4 : 0;
 #ifdef XINERAMA
 	i = 0;
 	if (parentwin == root && (info = XineramaQueryScreens(dpy, &n))) {
@@ -653,20 +663,40 @@ setup(void)
 				if (INTERSECT(x, y, 1, 1, info[i]))
 					break;
 
+		mw = (cols)
+            ? MIN(MAX(max_textw() + promptw, (TEXTW(" ") - lrpad) * cols), info[i].width)
+            : info[i].width - (border_width*2);
+
+        if (center) {
+            x = ((x_offset > 1)
+                ? info[i].x_org + x_offset
+                : info[i].width * x_offset)
+            - (mw/2);
+
+            y = ((topbar) 
+                ? (y_offset > 1)
+                    ? info[i].y_org + y_offset
+                    : info[i].height * y_offset
+                : (y_offset > 1)
+                    ? (info[i].height - mh) - y_offset
+                    : info[i].height - ((info[i].height - mh) * y_offset))
+            - (mh/2);
+            
+        } else
+        {
+            x = (x_offset > 1)
+                ? info[i].x_org + x_offset
+                : info[i].width * x_offset;
+
+            y = (topbar) 
+                ? (y_offset > 1)
+                    ? info[i].y_org + y_offset
+                    : info[i].height * y_offset
+                : (y_offset > 1)
+                    ? (info[i].height - mh) - y_offset
+                    : info[i].height - ((info[i].height - mh) * y_offset);
+        }
         
-        x = (x_offset > 1)
-            ? info[i].x_org + x_offset
-            : info[i].width * x_offset;
-
-        y = (topbar) 
-            ? (y_offset > 1)
-                ? info[i].y_org + y_offset
-                : info[i].height * y_offset
-            : (y_offset > 1)
-                ? (info[i].height - mh) - y_offset
-                : info[i].height - ((info[i].height - mh) * y_offset);
-
-		mw = info[i].width - (border_width*2);
 		XFree(info);
 	} else
 #endif
@@ -674,22 +704,41 @@ setup(void)
 		if (!XGetWindowAttributes(dpy, parentwin, &wa))
 			die("could not get embedding window attributes: 0x%lx",
 			    parentwin);
-        
-        x = (x_offset > 1)
-            ? x_offset
-            : wa.width * x_offset;
 
-        y = (topbar)
-            ? (y_offset > 1)
-                ? y_offset
-                : wa.height - y_offset
-            : (y_offset > 1)
-                ? (wa.height - mh) - y_offset
-                : wa.height - (wa.height - mh) * y_offset;
+		mw = (cols)
+            ? MIN(MAX(max_textw() + promptw, (TEXTW(" ") - lrpad) * cols), wa.width)
+            : wa.width - (border_width*2);
 
-		mw = wa.width - (border_width*2);
+        if (center) {
+            x = ((x_offset > 1)
+                ? x_offset
+                : wa.width * x_offset)
+            - (mw/2);
+
+            y = ((topbar)
+                ? (y_offset > 1)
+                    ? y_offset
+                    : wa.height - y_offset
+                : (y_offset > 1)
+                    ? (wa.height - mh) - y_offset
+                    : wa.height - (wa.height - mh) * y_offset)
+                - (mh/2);
+            
+        } else
+        {
+            x = (x_offset > 1)
+                ? x_offset
+                : wa.width * x_offset;
+
+            y = (topbar)
+                ? (y_offset > 1)
+                    ? y_offset
+                    : wa.height - y_offset
+                : (y_offset > 1)
+                    ? (wa.height - mh) - y_offset
+                    : wa.height - (wa.height - mh) * y_offset;
+        }
 	}
-	promptw = (prompt && *prompt) ? TEXTW(prompt) - lrpad / 4 : 0;
 	inputw = MIN(inputw, mw/3);
 	match();
 
@@ -771,6 +820,8 @@ readxresources(void) {
             colors[SchemeBorder][ColBg] = strdup(xval.addr);
         if (XrmGetResource(xdb, "dmenu.lines", "*", &type, &xval))
             lines = atoi(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.cols", "*", &type, &xval))
+            cols = atoi(xval.addr);
         if (XrmGetResource(xdb, "dmenu.x", "*", &type, &xval))
             x_offset = atof(xval.addr);
         if (XrmGetResource(xdb, "dmenu.y", "*", &type, &xval))
