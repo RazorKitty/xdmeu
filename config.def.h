@@ -8,19 +8,20 @@ static const char *fonts[] = {
 };
 static const char *prompt      = NULL;      /* -p  option; prompt to the left of input field */
 static const char *colors[SchemeLast][2] = {
-	/*     fg         bg       */
-	[SchemeNorm] = { "#bbbbbb", "#222222" },
-	[SchemeSel] = { "#eeeeee", "#005577" },
-	[SchemePrompt] = { "#eeeeee", "#005577" },
-    [SchemeBorder] = { "#005577","#eeeeee" },
-	[SchemeOut] = { "#000000", "#00ffff" }
+	                  /* fg        bg       */
+	[SchemeNorm]    = { "#bbbbbb", "#222222" },
+	[SchemeSel]     = { "#eeeeee", "#005577" },
+	[SchemePrompt]  = { "#eeeeee", "#005577" },
+    [SchemeBorder]  = { "#005577", "#eeeeee" },
+	[SchemeOut]     = { "#000000", "#00ffff" }
 };
 /* -l option; if nonzero, dmenu uses vertical list with given number of lines */
 static unsigned int lines      = 0;
 /* -bw option; Size of the window border */
 static unsigned int border_width = 0;
 /* -c consider co-ordinates give to b relative to the center of the menu */
-static unsigned int center = 0;
+static unsigned int center_x = 0;
+static unsigned int center_y = 0;
 /* the x co-ordinate */
 static double x_offset = 0;
 /* the y co-ordinate */

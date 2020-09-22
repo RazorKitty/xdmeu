@@ -1,4 +1,5 @@
 /* See LICENSE file for copyright and license details. */
+#include <X11/X.h>
 #include <ctype.h>
 #include <locale.h>
 #include <stdio.h>
@@ -54,17 +55,6 @@ static XIC xic;
 static Drw *drw;
 static Clr *scheme[SchemeLast];
 
-/* Temporary arrays to allow overriding xresources values */
-static char *colortemp[9];
-static char *tempfonts;
-static char *prompttemp;
-static unsigned int linestemp;
-static unsigned int colstemp;
-static unsigned int border_width_temp = 0;
-static double x_offsettemp = 0;
-static double y_offsettemp = 0;
-
-
 #include "config.h"
 
 static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
@@ -101,7 +91,7 @@ calcoffsets(void)
 			break;
 }
 
-static max_textw(void)
+static int max_textw(void)
 {
     int len = 0;
     for (struct item *item = items; item && item->text; item++)
@@ -624,10 +614,6 @@ setup(void)
 	for (j = 0; j < SchemeLast; j++) {
 		scheme[j] = drw_scm_create(drw, (const char**)colors[j], 2);
 	}
-	for (j = 0; j < SchemeOut; ++j) {
-		for (i = 0; i < 2; ++i)
-			free(colors[j][i]);
-	}
 
 	clip = XInternAtom(dpy, "CLIPBOARD",   False);
 	utf8 = XInternAtom(dpy, "UTF8_STRING", False);
@@ -667,36 +653,30 @@ setup(void)
             ? MIN(MAX(max_textw() + promptw, (TEXTW(" ") - lrpad) * cols), info[i].width)
             : info[i].width - (border_width*2);
 
-        if (center) {
-            x = ((x_offset > 1)
+        x = (
+            (x_offset > 1)
                 ? info[i].x_org + x_offset
-                : info[i].width * x_offset)
-            - (mw/2);
+                : info[i].width * x_offset
+        ) - (
+            (center_x)
+                ? (mw/2) 
+                : 0
+        );
 
-            y = ((topbar) 
+        y = (
+            (topbar) 
                 ? (y_offset > 1)
                     ? info[i].y_org + y_offset
                     : info[i].height * y_offset
                 : (y_offset > 1)
                     ? (info[i].height - mh) - y_offset
-                    : info[i].height - ((info[i].height - mh) * y_offset))
-            - (mh/2);
-            
-        } else
-        {
-            x = (x_offset > 1)
-                ? info[i].x_org + x_offset
-                : info[i].width * x_offset;
+                    : info[i].height - ((info[i].height - mh) * y_offset)
+        ) - (
+            (center_y)
+                ? (mh/2)
+                : 0
+        );
 
-            y = (topbar) 
-                ? (y_offset > 1)
-                    ? info[i].y_org + y_offset
-                    : info[i].height * y_offset
-                : (y_offset > 1)
-                    ? (info[i].height - mh) - y_offset
-                    : info[i].height - ((info[i].height - mh) * y_offset);
-        }
-        
 		XFree(info);
 	} else
 #endif
@@ -709,34 +689,30 @@ setup(void)
             ? MIN(MAX(max_textw() + promptw, (TEXTW(" ") - lrpad) * cols), wa.width)
             : wa.width - (border_width*2);
 
-        if (center) {
-            x = ((x_offset > 1)
+        x = (
+            (x_offset > 1)
                 ? x_offset
-                : wa.width * x_offset)
-            - (mw/2);
+                : wa.width * x_offset
+        ) - (
+            (center_x)
+                ? (mw/2)
+                : 0
+        );
 
-            y = ((topbar)
+        y = (
+            (topbar)
                 ? (y_offset > 1)
                     ? y_offset
                     : wa.height * y_offset
                 : (y_offset > 1)
                     ? (wa.height - mh) - y_offset
-                    : wa.height - (wa.height - mh) * y_offset)
-                - (mh/2);
-        } else
-        {
-            x = (x_offset > 1)
-                ? x_offset
-                : wa.width * x_offset;
+                    : wa.height - (wa.height - mh) * y_offset
+        ) - (
+            (center_y)
+                ? (mh/2)
+                : 0
+        );
 
-            y = (topbar)
-                ? (y_offset > 1)
-                    ? y_offset
-                    : wa.height - y_offset
-                : (y_offset > 1)
-                    ? (wa.height - mh) - y_offset
-                    : wa.height - (wa.height - mh) * y_offset;
-        }
 	}
 	inputw = MIN(inputw, mw/3);
 	match();
@@ -777,9 +753,10 @@ static void
 usage(void)
 {
 	fputs("usage: dmenu [-bfiv] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
-	      "             [-nb color] [-nf color] [-sb color] [-sf color] [-w windowid]\n"
-          "             [-ob color] [-of color] [-bw width] [-bc color]\n"
-          "             [-pb color] [-pf color] [-x xoffset] [-y yoffset] \n", stderr);
+	      "             [-bw width] [-w windowid] [-x xoffset] [-y yoffset] [-c int]\n"
+          "             [-nb color] [-nf color] [-sb color] [-sf color]\n"
+          "             [-ob color] [-of color] [-pb color] [-pf color]\n"
+          "             [-bc color]\n", stderr);
 	exit(1);
 }
 
@@ -788,7 +765,7 @@ readxresources(void) {
 	XrmInitialize();
 
 	char* xrm;
-	if ((xrm = XResourceManagerString(drw->dpy))) {
+	if ((xrm = XResourceManagerString(dpy))) {
 		char *type;
 		XrmDatabase xdb = XrmGetStringDatabase(xrm);
 		XrmValue xval;
@@ -825,8 +802,10 @@ readxresources(void) {
             x_offset = atof(xval.addr);
         if (XrmGetResource(xdb, "dmenu.y", "*", &type, &xval))
             y_offset = atof(xval.addr);
-        if (XrmGetResource(xdb, "dmenu.center", "*", &type, &xval))
-            center = atoi(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.center_x", "*", &type, &xval))
+            center_x = atoi(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.center_y", "*", &type, &xval))
+            center_y = atoi(xval.addr);
         XrmDestroyDatabase(xdb);
 	}
 }
@@ -836,6 +815,15 @@ main(int argc, char *argv[])
 {
 	XWindowAttributes wa;
 	int i, fast = 0;
+
+	if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
+		fputs("warning: no locale support\n", stderr);
+	if (!(dpy = XOpenDisplay(NULL)))
+		die("cannot open display");
+	screen = DefaultScreen(dpy);
+	root = RootWindow(dpy, screen);
+
+	readxresources();
 
 	for (i = 1; i < argc; i++)
 		/* these options take no arguments */
@@ -852,87 +840,55 @@ main(int argc, char *argv[])
 		} else if (i + 1 == argc)
 			usage();
 		/* these options take one argument */
+		else if (!strcmp(argv[i], "-w"))   /* embedding window id */
+			embed = argv[++i];
 		else if (!strcmp(argv[i], "-l"))   /* number of lines in vertical list */
-			linestemp = atoi(argv[++i]);
+			lines = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "-m"))
 			mon = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "-p"))   /* adds prompt to left of input field */
-			prompttemp = argv[++i];
+			prompt = strdup(argv[++i]);
 		else if (!strcmp(argv[i], "-fn"))  /* font or font set */
-			tempfonts = argv[++i];
-		else if (!strcmp(argv[i], "-nb"))  /* normal background color */
-			colortemp[0] = argv[++i];
-		else if (!strcmp(argv[i], "-nf"))  /* normal foreground color */
-			colortemp[1] = argv[++i];
-		else if (!strcmp(argv[i], "-sb"))  /* selected background color */
-			colortemp[2] = argv[++i];
-		else if (!strcmp(argv[i], "-sf"))  /* selected foreground color */
-			colortemp[3] = argv[++i];
-		else if (!strcmp(argv[i], "-w"))   /* embedding window id */
-			embed = argv[++i];
-        else if (!strcmp(argv[i], "-ob"))  /* out background color */
-            colortemp[4] = argv[++i];
-        else if (!strcmp(argv[i], "-of"))  /* out foreground color */
-            colortemp[5] = argv[++i];
-        else if (!strcmp(argv[i], "-pb")) /* prompt background */
-            colortemp[6] = argv[++i];
-        else if (!strcmp(argv[i], "-pf")) /* prompt foreground */
-            colortemp[7] = argv[++i];
-        else if (!strcmp(argv[i], "-bc"))  /* border color */
-            colortemp[8] = argv[++i];
-        else if (!strcmp(argv[i], "-bw"))  /* border width */
-            border_width_temp = atoi(argv[++i]);
+			fonts[0] = strdup(argv[++i]);
         else if (!strcmp(argv[i], "-x"))   /* window x offset */
-            x_offsettemp = atof(argv[++i]);
+            x_offset = atof(argv[++i]);
         else if (!strcmp(argv[i], "-y"))   /* window y offset (from bottom up if -b) */
-            y_offsettemp = atof(argv[++i]);
+            y_offset = atof(argv[++i]);
+        else if (!strcmp(argv[i], "-cx"))
+            center_x = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-cy"))
+            center_y = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-co"))
+            cols = atoi(argv[++i]);
+		else if (!strcmp(argv[i], "-nb"))  /* normal background color */
+			colors[SchemeNorm][ColBg] = strdup(argv[++i]);
+		else if (!strcmp(argv[i], "-nf"))  /* normal foreground color */
+			colors[SchemeNorm][ColFg] = strdup(argv[++i]);
+		else if (!strcmp(argv[i], "-sb"))  /* selected background color */
+			colors[SchemeSel][ColBg] = strdup(argv[++i]);
+		else if (!strcmp(argv[i], "-sf"))  /* selected foreground color */
+			colors[SchemeSel][ColFg] = strdup(argv[++i]);
+        else if (!strcmp(argv[i], "-ob"))  /* out background color */
+            colors[SchemeOut][ColBg] = strdup(argv[++i]);
+        else if (!strcmp(argv[i], "-of"))  /* out foreground color */
+            colors[SchemeOut][ColFg] = strdup(argv[++i]);
+        else if (!strcmp(argv[i], "-pb")) /* prompt background */
+            colors[SchemePrompt][ColBg] = strdup(argv[++i]);
+        else if (!strcmp(argv[i], "-pf")) /* prompt foreground */
+            colors[SchemePrompt][ColFg] = strdup(argv[++i]);
+        else if (!strcmp(argv[i], "-bc"))  /* border color */
+            colors[SchemeBorder][ColBg] = strdup(argv[++i]);
+        else if (!strcmp(argv[i], "-bw"))  /* border width */
+            border_width = atoi(argv[++i]);
 		else
 			usage();
 
-	if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
-		fputs("warning: no locale support\n", stderr);
-	if (!(dpy = XOpenDisplay(NULL)))
-		die("cannot open display");
-	screen = DefaultScreen(dpy);
-	root = RootWindow(dpy, screen);
 	if (!embed || !(parentwin = strtol(embed, NULL, 0)))
 		parentwin = root;
 	if (!XGetWindowAttributes(dpy, parentwin, &wa))
 		die("could not get embedding window attributes: 0x%lx",
 		    parentwin);
 	drw = drw_create(dpy, screen, root, wa.width , wa.height);
-	readxresources();
-	/* Now we check whether to override xresources with commandline parameters */
-	if (tempfonts)
-	   fonts[0] = strdup(tempfonts);
-	if (colortemp[0])
-	   colors[SchemeNorm][ColBg] = strdup(colortemp[0]);
-	if (colortemp[1])
-	   colors[SchemeNorm][ColFg] = strdup(colortemp[1]);
-	if (colortemp[2])
-	   colors[SchemeSel][ColBg]  = strdup(colortemp[2]);
-	if (colortemp[3])
-	   colors[SchemeSel][ColFg]  = strdup(colortemp[3]);
-    if (colortemp[4])
-       colors[SchemeOut][ColBg] = strdup(colortemp[4]);
-    if (colortemp[5])
-        colors[SchemeOut][ColFg] = strdup(colortemp[5]);
-    if (colortemp[6])
-        colors[SchemePrompt][ColBg] = strdup(colortemp[6]);
-    if (colortemp[7])
-        colors[SchemePrompt][ColFg] = strdup(colortemp[7]);
-    if (colortemp[8])
-        colors[SchemeBorder][ColBg] = strdup(colortemp[8]);
-    if (prompttemp)
-        prompt = prompttemp;
-    if (border_width_temp)
-        border_width = border_width_temp;
-    if (linestemp) 
-        lines = linestemp;
-    if (x_offsettemp)
-        x_offset = x_offsettemp;
-    if (y_offsettemp)
-        y_offset = y_offsettemp;
 
 	if (!drw_fontset_create(drw, (const char**)fonts, LENGTH(fonts)))
 		die("no fonts could be loaded.");
