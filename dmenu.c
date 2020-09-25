@@ -753,7 +753,8 @@ static void
 usage(void)
 {
 	fputs("usage: dmenu [-bfiv] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
-	      "             [-bw width] [-w windowid] [-x xoffset] [-y yoffset] [-c int]\n"
+	      "             [-bw width] [-w windowid] [-x xoffset] [-y yoffset]\n"
+          "             [-cx (0|1)] [-cy (0|1)] [ -c (0|1)]\n"
           "             [-nb color] [-nf color] [-sb color] [-sf color]\n"
           "             [-ob color] [-of color] [-pb color] [-pf color]\n"
           "             [-bc color]\n", stderr);
@@ -802,6 +803,10 @@ readxresources(void) {
             x_offset = atof(xval.addr);
         if (XrmGetResource(xdb, "dmenu.y", "*", &type, &xval))
             y_offset = atof(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.center", "*", &type, &xval)) {
+            center_x = atoi(xval.addr);
+            center_y = atoi(xval.addr);
+        }
         if (XrmGetResource(xdb, "dmenu.center_x", "*", &type, &xval))
             center_x = atoi(xval.addr);
         if (XrmGetResource(xdb, "dmenu.center_y", "*", &type, &xval))
@@ -844,7 +849,7 @@ main(int argc, char *argv[])
 			embed = argv[++i];
 		else if (!strcmp(argv[i], "-l"))   /* number of lines in vertical list */
 			lines = atoi(argv[++i]);
-		else if (!strcmp(argv[i], "-m"))
+		else if (!strcmp(argv[i], "-m"))   /* choose monitor to display on */
 			mon = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "-p"))   /* adds prompt to left of input field */
 			prompt = strdup(argv[++i]);
@@ -854,11 +859,15 @@ main(int argc, char *argv[])
             x_offset = atof(argv[++i]);
         else if (!strcmp(argv[i], "-y"))   /* window y offset (from bottom up if -b) */
             y_offset = atof(argv[++i]);
-        else if (!strcmp(argv[i], "-cx"))
+        else if (!strcmp(argv[i], "-c")) {  /* treat x and y offsets as relative to the center */
             center_x = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "-cy"))
+            center_y = atoi(argv[i]);
+        }
+        else if (!strcmp(argv[i], "-cx"))  /* treat x offset as relative to the center */
+            center_x = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-cy"))  /* treat x offset as relative to the center */
             center_y = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "-co"))
+        else if (!strcmp(argv[i], "-co")) /* set width in number of characters */
             cols = atoi(argv[++i]);
 		else if (!strcmp(argv[i], "-nb"))  /* normal background color */
 			colors[SchemeNorm][ColBg] = strdup(argv[++i]);
