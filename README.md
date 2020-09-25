@@ -7,7 +7,17 @@ The goal is to keep the core functionality the same while a few more options and
 ## What's new?
 Patches that have been added and extended:
 * [border](https://tools.suckless.org/dmenu/patches/border/)
-* [xresources](https://tools.suckless.org/dmenu/patches/xresources/) 
+* [xresources](https://tools.suckless.org/dmenu/patches/xresources/)
+* [xyw](https://tools.suckless.org/dmenu/patches/xyw/)
+* [centered](https://tools.suckless.org/dmenu/patches/centered/)
+
+### xyw
+* -x and -y can be used to set positional offset of the window, provided values of less that 1 are interpred and a percentage of the draw space
+* -co sets the width of the window in characters
+
+### centered
+* -cx and -cy set the x and y offsets as relative to the center of thier respective axis, anything but 0 turns this on
+* -c will set the flax for but x and y together
 
 ### Border
 A border width and color can bet set either in `config.h` or via the command line
@@ -23,6 +33,12 @@ A border width and color can bet set either in `config.h` or via the command lin
 * font
 * border width
 * border color
+* cols int
+* x float
+* y float
+* center_x int
+* center_y int
+* center int
 
 ### Extras
 Out and Prompt colors can now be supplied at the command line
