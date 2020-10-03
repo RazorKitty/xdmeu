@@ -29,6 +29,8 @@ A border width and color can bet set either in `config.h` or via the command lin
 * selected background
 * prompt foreground
 * prompt background
+* input foreground
+* input background
 * prompt text
 * font
 * border width

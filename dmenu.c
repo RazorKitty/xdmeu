@@ -28,7 +28,7 @@
 #define TEXTW(X)              (drw_fontset_getwidth(drw, (X)) + lrpad)
 
 /* enums */
-enum { SchemeNorm, SchemeSel, SchemeOut, SchemePrompt, SchemeBorder, SchemeLast }; /* color schemes */
+enum { SchemeNorm, SchemeSel, SchemeOut, SchemePrompt, SchemeInput, SchemeBorder, SchemeLast }; /* color schemes */
 
 struct item {
 	char *text;
@@ -152,7 +152,7 @@ drawmenu(void)
 	}
 	/* draw input field */
 	w = (lines > 0 || !matches) ? mw - x : inputw;
-	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_setscheme(drw, scheme[SchemeInput]);
 	drw_text(drw, x, 0, w, bh, lrpad / 2, text, 0);
 
 	curpos = TEXTW(text) - TEXTW(&text[cursor]);
@@ -754,9 +754,10 @@ usage(void)
 {
 	fputs("usage: dmenu [-bfiv] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
 	      "             [-bw width] [-w windowid] [-x xoffset] [-y yoffset]\n"
-          "             [-cx (0|1)] [-cy (0|1)] [ -c (0|1)]\n"
+          "             [-cx (0|1)] [-cy (0|1)] [-c (0|1)] [-co columns]\n"
           "             [-nb color] [-nf color] [-sb color] [-sf color]\n"
           "             [-ob color] [-of color] [-pb color] [-pf color]\n"
+          "             [-ib color] [-if color]\n"
           "             [-bc color]\n", stderr);
 	exit(1);
 }
@@ -789,6 +790,10 @@ readxresources(void) {
             colors[SchemePrompt][ColBg] = strdup(xval.addr);
         if (XrmGetResource(xdb, "dmenu.promptforeground", "*", &type, &xval))
             colors[SchemePrompt][ColFg] = strdup(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.inputbackground", "*", &type, &xval))
+            colors[SchemeInput][ColBg] = strdup(xval.addr);
+        if (XrmGetResource(xdb, "dmenu.inputforeground", "*", &type, &xval))
+            colors[SchemeInput][ColFg] = strdup(xval.addr);
         if (XrmGetResource(xdb, "dmenu.prompt", "*", &type, &xval))
             prompt = strdup(xval.addr);
         if (XrmGetResource(xdb, "dmenu.border_width", "*", &type, &xval)) 
@@ -885,6 +890,10 @@ main(int argc, char *argv[])
             colors[SchemePrompt][ColBg] = strdup(argv[++i]);
         else if (!strcmp(argv[i], "-pf")) /* prompt foreground */
             colors[SchemePrompt][ColFg] = strdup(argv[++i]);
+        else if (!strcmp(argv[i], "-ib")) /* input background */
+            colors[SchemeInput][ColBg] = strdup(argv[++i]);
+        else if (!strcmp(argv[i], "-if")) /* input foreground */
+            colors[SchemeInput][ColFg] = strdup(argv[++i]);
         else if (!strcmp(argv[i], "-bc"))  /* border color */
             colors[SchemeBorder][ColBg] = strdup(argv[++i]);
         else if (!strcmp(argv[i], "-bw"))  /* border width */

@@ -12,6 +12,7 @@ static const char *colors[SchemeLast][2] = {
 	[SchemeNorm]    = { "#bbbbbb", "#222222" },
 	[SchemeSel]     = { "#eeeeee", "#005577" },
 	[SchemePrompt]  = { "#eeeeee", "#005577" },
+    [SchemeInput]   = { "#bbbbbb", "#222222" },
     [SchemeBorder]  = { "#005577", "#eeeeee" },
 	[SchemeOut]     = { "#000000", "#00ffff" }
 };
