@@ -29,6 +29,8 @@ static double x_offset = 0;
 static double y_offset = 0;
 /* if nonzero i will be used as the number of characters wide the menu should be */
 static unsigned int cols = 0;
+/* character used to replace input text for password entry */
+static char censor = '.';
 /*
  * Characters not considered part of a word while deleting words
  * for example: " /?\"&[]"
