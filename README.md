@@ -10,6 +10,7 @@ Patches that have been added and extended:
 * [xresources](https://tools.suckless.org/dmenu/patches/xresources/)
 * [xyw](https://tools.suckless.org/dmenu/patches/xyw/)
 * [centered](https://tools.suckless.org/dmenu/patches/centered/)
+* [password](https://tools.suckless.org/dmenu/patches/password)
 
 ### xyw
 * -x and -y can be used to set positional offset of the window, provided values of less that 1 are interpred and a percentage of the draw space
@@ -21,6 +22,10 @@ Patches that have been added and extended:
 
 ### Border
 A border width and color can bet set either in `config.h` or via the command line
+
+### Password
+* -P can be used to enter password mode, input characters are rendered as a censor character and stdin is ignored
+* -Pc can be used to set the censor character
 
 ### Xresources
 * Normal foreground
@@ -41,9 +46,10 @@ A border width and color can bet set either in `config.h` or via the command lin
 * center_x int
 * center_y int
 * center int
+* censor
 
 ### Extras
-Out and Prompt colors can now be supplied at the command line
+Out, Prompt, and input colors can now be supplied at the command line
 
 ## Requirements
 In order to build xdmenu you need the Xlib header files.
